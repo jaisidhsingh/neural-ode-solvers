@@ -25,7 +25,7 @@ class MLP:
     def __call__(self, x):
         for w, b in self.params[:-1]:
             x = jnp.dot(x, w) + b
-            x = jax.nn.relu(x)
+            x = jax.nn.gelu(x)
         w, b = self.params[-1]
         out = jnp.dot(x, w) + b
         return out[0] if self.mode == "train" else out
@@ -34,8 +34,6 @@ class MLP:
 def actual_trajectory(x, initial_condition):
     """
     Returns the analytical solution of the ODE
-    y = y_0 + \int_0^x x**2 + jnp.sin(x)**2
-    y = y_0 + 0.5*x + 0.25*jnp.cos(2*x)
     """
     return initial_condition + (1/3) * (x**3)
 
@@ -76,14 +74,14 @@ def train_node():
     upper_bound = 1
     x_dim = 1
     y_dim = 1
-    x = jnp.linspace(0, upper_bound)
+    x = jnp.linspace(0, upper_bound, 1000)
 
     layer_sizes = [x_dim, 128, 64, y_dim]
     key = jax.random.PRNGKey(0)
     model = MLP(layer_sizes, key)
     model.train()
 
-    num_epochs = 10
+    num_epochs = 1
     initial_condition = 0.0 
     lr = 1e-3
 
@@ -91,7 +89,7 @@ def train_node():
     
     x = x.reshape(x.shape[0], 1)
     x_0 = x[0]
-    bar = tqdm(total=num_epochs * 50)
+    bar = tqdm(total=num_epochs * 1000)
     for epoch in range(num_epochs):
         for idx, point in enumerate(x):
             loss_value = loss_function(model.params, point, model, initial_condition, x_0)
@@ -106,8 +104,8 @@ def train_node():
     bar.close()
 
     model.eval()
-    y_pred = model(x).reshape(50,)
-    x = x.reshape(50,)
+    y_pred = model(x).reshape(1000,)
+    x = x.reshape(1000,)
     y = actual_trajectory(x, initial_condition)
     plot_eval(x, y, y_pred)
 
